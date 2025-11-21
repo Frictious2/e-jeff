@@ -1,0 +1,165 @@
+<div class="container-fluid my-3">
+  <form id="kanbanSearchForm" class="row g-3 align-items-end" onsubmit="return false;">
+    <div class="col-sm-6 col-md-4">
+      <label class="form-label">Search by Document Number</label>
+      <input id="kanbanSearchInput" type="text" class="form-control" placeholder="e.g. INV-20250105-007" />
+    </div>
+    <div class="col-auto">
+      <button id="kanbanSearchBtn" class="btn btn-primary" type="button">
+        <i class="bi bi-search"></i> Search
+      </button>
+    </div>
+  </form>
+</div>
+
+<div class="container-fluid">
+  <div class="row g-3">
+    <% const groups = { 'Pending': [], 'In Transit': [], 'Delivered': [] }; %>
+    <% (docs || []).forEach(function(doc) { groups[doc.shipment_status] && groups[doc.shipment_status].push(doc); }); %>
+
+    <% ['Pending', 'In Transit', 'Delivered'].forEach(function(status) { %>
+      <div class="col-12 col-md-4">
+        <div class="card">
+          <div class="card-header d-flex align-items-center justify-content-between">
+            <span><i class="bi bi-clipboard-check"></i> <%= status %></span>
+            <span class="badge bg-secondary"><%= groups[status].length %></span>
+          </div>
+          <div class="card-body">
+            <% if (groups[status].length) { %>
+              <% groups[status].forEach(function(doc) { 
+                   const est = doc.estimated_delivery_date ? new Date(doc.estimated_delivery_date) : null;
+              %>
+                <div class="card mb-3 doc-card" data-doc-id="<%= doc.id %>" role="button">
+                  <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        <strong><%= doc.document_number %></strong>
+                        <div class="text-muted small"><%= doc.document_type %> — <%= doc.customer_name %></div>
+                      </div>
+                      <div class="text-end">
+                        <div class="small"><i class="bi bi-calendar-event"></i> <%= est ? est.toLocaleDateString() : 'N/A' %></div>
+                      </div>
+                    </div>
+                    <% if (doc.description) { %>
+                      <div class="mt-2 text-muted small"><%= doc.description %></div>
+                    <% } %>
+                  </div>
+                </div>
+              <% }); %>
+            <% } else { %>
+              <div class="alert alert-light mb-0">No documents in this status.</div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    <% }); %>
+  </div>
+</div>
+
+<!-- Document Details Modal (same style as gallery "Read More") -->
+<div class="modal fade" id="docDetailsModal" tabindex="-1" aria-labelledby="docDetailsLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="docDetailsLabel">Document Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <img id="docDetailsImage" src="" class="img-fluid rounded" alt="Document image" />
+          </div>
+          <div class="col-md-6">
+            <dl class="row mb-0">
+              <dt class="col-sm-4">Number</dt>
+              <dd class="col-sm-8" id="docDetailsNumber"></dd>
+
+              <dt class="col-sm-4">Type</dt>
+              <dd class="col-sm-8" id="docDetailsType"></dd>
+
+              <dt class="col-sm-4">Customer</dt>
+              <dd class="col-sm-8" id="docDetailsCustomer"></dd>
+
+              <dt class="col-sm-4">Status</dt>
+              <dd class="col-sm-8" id="docDetailsStatus"></dd>
+
+              <dt class="col-sm-4">Uploaded</dt>
+              <dd class="col-sm-8" id="docDetailsUploaded"></dd>
+
+              <dt class="col-sm-4">Estimated Delivery</dt>
+              <dd class="col-sm-8" id="docDetailsEstimated"></dd>
+
+              <dt class="col-sm-4">Summary</dt>
+              <dd class="col-sm-8" id="docDetailsSummary"></dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Clickable cards -> open modal with details
+  document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.doc-card');
+    cards.forEach(function(card) {
+      card.addEventListener('click', async function() {
+        const id = this.getAttribute('data-doc-id');
+        if (!id) return;
+        await openDocModalById(id);
+      });
+    });
+
+    // Search by document number -> open modal
+    document.getElementById('kanbanSearchBtn').addEventListener('click', async function() {
+      const value = (document.getElementById('kanbanSearchInput').value || '').trim();
+      if (!value) return;
+      try {
+        const res = await fetch('/api/documents/by-number?document_number=' + encodeURIComponent(value));
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          const msg = (res.status === 404) ? 'No document found.' : (data.error || 'Search failed.');
+          return alert(msg);
+        }
+        const doc = await res.json();
+        await openDocModal(doc);
+      } catch (e) {
+        console.error(e);
+        alert('Search failed.');
+      }
+    });
+
+    async function openDocModalById(id) {
+      try {
+        const res = await fetch('/api/documents/' + id);
+        if (!res.ok) throw new Error('Failed to load document');
+        const doc = await res.json();
+        await openDocModal(doc);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function openDocModal(doc) {
+      const isRemote = doc.image_path && /^https?:\/\//.test(doc.image_path);
+      const src = isRemote ? doc.image_path : ('/' + doc.image_path);
+
+      document.getElementById('docDetailsLabel').textContent = `${doc.document_number} - ${doc.document_type}`;
+      document.getElementById('docDetailsImage').src = src;
+      document.getElementById('docDetailsNumber').textContent = doc.document_number || '';
+      document.getElementById('docDetailsType').textContent = doc.document_type || '';
+      document.getElementById('docDetailsCustomer').textContent = doc.customer_name || '';
+      document.getElementById('docDetailsStatus').textContent = doc.shipment_status || '';
+      document.getElementById('docDetailsUploaded').textContent = doc.upload_date ? new Date(doc.upload_date).toLocaleString() : 'N/A';
+      document.getElementById('docDetailsEstimated').textContent = doc.estimated_delivery_date ? new Date(doc.estimated_delivery_date).toLocaleDateString() : 'N/A';
+      document.getElementById('docDetailsSummary').textContent = doc.document_summary || 'No summary provided.';
+
+      const modal = new bootstrap.Modal(document.getElementById('docDetailsModal'));
+      modal.show();
+    }
+  });
+</script>

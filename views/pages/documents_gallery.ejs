@@ -1,0 +1,142 @@
+<!-- Upload form -->
+<div class="container-fluid my-3">
+  <div class="card">
+    <div class="card-body">
+      <form action="/documents/upload" method="post" enctype="multipart/form-data" class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Document Type</label>
+          <select name="documentType" class="form-select" required>
+            <option>Invoice</option>
+            <option>Bill of Lading</option>
+            <option>Customer Paperwork</option>
+            <option>Packing List</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Customer Name</label>
+          <input type="text" name="customerName" class="form-control" required />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Shipment Status</label>
+          <select name="shipmentStatus" class="form-select" required>
+            <option>In Transit</option>
+            <option>Pending</option>
+            <option>Delivered</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Image</label>
+          <input type="file" name="image" class="form-control" accept="image/*" />
+        </div>
+        <div class="col-12">
+          <label class="form-label">Short Description</label>
+          <input type="text" name="description" class="form-control" placeholder="Short description..." />
+        </div>
+        <div class="col-12">
+          <label class="form-label">Document Summary</label>
+          <textarea name="documentSummary" class="form-control" rows="3" placeholder="Full details..."></textarea>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Estimated Delivery Date</label>
+          <input type="date" name="estimatedDelivery" class="form-control" />
+        </div>
+        <div class="col-12 d-flex justify-content-end">
+          <button class="btn btn-success" type="submit">
+            <i class="bi bi-upload"></i> Upload Document
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Filter by Type -->
+<div class="container-fluid my-3">
+  <% var _allowedTypes = (typeof allowedTypes !== 'undefined') ? allowedTypes : []; %>
+  <% var selType = (typeof selectedType !== 'undefined') ? selectedType : ''; %>
+  <form method="get" action="/documents/gallery" class="row g-3 align-items-end">
+    <div class="col-sm-4 col-md-3">
+      <label class="form-label">Filter by Type</label>
+      <select name="type" class="form-select">
+        <option value="">All</option>
+        <% _allowedTypes.forEach(function(t) { %>
+          <option value="<%= t %>" <%= selType === t ? 'selected' : '' %>><%= t %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-outline-primary">
+        <i class="bi bi-funnel"></i> Apply
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Gallery grid -->
+<div class="container-fluid">
+  <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4">
+    <% if (typeof docs !== 'undefined' && docs.length) { %>
+      <% docs.forEach(function(doc) { 
+           const isRemote = doc.image_path && /^https?:\/\//.test(doc.image_path);
+           const src = isRemote ? doc.image_path : ('/' + doc.image_path);
+      %>
+        <div class="col">
+          <div class="card h-100">
+            <img src="<%= src %>" class="card-img-top" alt="<%= doc.document_type %> image" />
+            <div class="card-body">
+              <h5 class="card-title"><%= doc.document_number %></h5>
+              <p class="card-text"><%= doc.description || 'No description provided.' %></p>
+              <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#docModal_<%= doc.id %>">
+                Read More
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Modal -->
+        <div class="modal fade" id="docModal_<%= doc.id %>" tabindex="-1" aria-labelledby="docModalLabel_<%= doc.id %>" aria-hidden="true">
+          <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="docModalLabel_<%= doc.id %>"><%= doc.document_number %> - <%= doc.document_type %></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <img src="<%= src %>" class="img-fluid rounded" alt="<%= doc.document_type %> image" />
+                  </div>
+                  <div class="col-md-6">
+                    <dl class="row">
+                      <dt class="col-sm-4">Type</dt>
+                      <dd class="col-sm-8"><%= doc.document_type %></dd>
+
+                      <dt class="col-sm-4">Customer</dt>
+                      <dd class="col-sm-8"><%= doc.customer_name %></dd>
+
+                      <dt class="col-sm-4">Status</dt>
+                      <dd class="col-sm-8"><%= doc.shipment_status %></dd>
+
+                      <dt class="col-sm-4">Uploaded</dt>
+                      <dd class="col-sm-8"><%= new Date(doc.upload_date).toLocaleString() %></dd>
+
+                      <dt class="col-sm-4">Summary</dt>
+                      <dd class="col-sm-8"><%= doc.document_summary || 'No summary provided.' %></dd>
+                    </dl>
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% }); %>
+    <% } else { %>
+      <div class="col">
+        <div class="alert alert-info">No documents yet. Upload one above.</div>
+      </div>
+    <% } %>
+  </div>
+</div>

@@ -1,0 +1,129 @@
+:root {
+  --bg: #0f172a;
+  --panel: #111827;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --accent: #22c55e;
+  --accent-bg: rgba(34, 197, 94, 0.15);
+  --border: #1f2937;
+}
+/* Light theme variables via Bootstrap’s data attribute */
+:root[data-bs-theme="light"] {
+  --bg: #f3f4f6;
+  --panel: #ffffff;
+  --text: #111827;
+  --muted: #6b7280;
+  --accent: #2563eb;
+  --accent-bg: rgba(37, 99, 235, 0.15);
+  --border: #e5e7eb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: row;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 260px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  padding: 16px;
+  transition: width 0.2s ease, padding 0.2s ease;
+}
+
+.brand {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+  color: var(--accent);
+}
+
+/* Links with icons */
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.nav-icon {
+  font-size: 1.1rem;
+  width: 20px;
+  flex: 0 0 20px;
+  text-align: center;
+}
+
+.nav-link:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.nav-group {
+  margin-bottom: 20px;
+}
+
+.nav-group-title {
+  font-size: 13px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+/* Right side column */
+.main-column {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Collapsed state */
+.app[data-collapsed="true"] .sidebar {
+  width: 72px;
+  padding: 12px;
+}
+
+.app[data-collapsed="true"] .nav-group-title,
+.app[data-collapsed="true"] .nav-label {
+  display: none;
+}
+
+.app[data-collapsed="true"] .nav-link {
+  justify-content: center;
+}
+
+.app[data-collapsed="true"] .brand {
+  justify-content: center;
+}
+
+/* Main content */
+.content {
+  flex: 1;
+  padding: 24px;
+}
+
+/* Uniform gallery card image */
+.card-img-top {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  object-position: center;
+}

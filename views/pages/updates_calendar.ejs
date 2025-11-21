@@ -1,0 +1,119 @@
+<div class="container-fluid my-3">
+  <% var _allowedTypes = (typeof allowedTypes !== 'undefined') ? allowedTypes : ['Invoice', 'Bill of Lading', 'Customer Paperwork', 'Packing List', 'Other']; %>
+  <form class="row g-3 align-items-end">
+    <div class="col-sm-4 col-md-3">
+      <label class="form-label">Filter by Type</label>
+      <select id="calendarTypeFilter" class="form-select">
+        <option value="">All</option>
+        <% _allowedTypes.forEach(function(t) { %>
+          <option value="<%= t %>"><%= t %></option>
+        <% }) %>
+      </select>
+    </div>
+  </form>
+</div>
+
+<div class="container-fluid">
+  <div id="calendar" style="min-height: 80vh;"></div>
+</div>
+
+<!-- Document Details Modal (same style as gallery) -->
+<div class="modal fade" id="docDetailsModal" tabindex="-1" aria-labelledby="docDetailsLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="docDetailsLabel">Document Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <img id="docDetailsImage" src="" class="img-fluid rounded" alt="Document image" />
+          </div>
+          <div class="col-md-6">
+            <dl class="row mb-0">
+              <dt class="col-sm-4">Number</dt>
+              <dd class="col-sm-8" id="docDetailsNumber"></dd>
+
+              <dt class="col-sm-4">Type</dt>
+              <dd class="col-sm-8" id="docDetailsType"></dd>
+
+              <dt class="col-sm-4">Customer</dt>
+              <dd class="col-sm-8" id="docDetailsCustomer"></dd>
+
+              <dt class="col-sm-4">Status</dt>
+              <dd class="col-sm-8" id="docDetailsStatus"></dd>
+
+              <dt class="col-sm-4">Uploaded</dt>
+              <dd class="col-sm-8" id="docDetailsUploaded"></dd>
+
+              <dt class="col-sm-4">Estimated Delivery</dt>
+              <dd class="col-sm-8" id="docDetailsEstimated"></dd>
+
+              <dt class="col-sm-4">Summary</dt>
+              <dd class="col-sm-8" id="docDetailsSummary"></dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var selectedType = '';
+    const calendarEl = document.getElementById('calendar');
+    const filterEl = document.getElementById('calendarTypeFilter');
+
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: 'dayGridMonth',
+      height: 'auto',
+      headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' },
+      events: {
+        url: '/api/updates/events',
+        extraParams: function() {
+          return selectedType ? { type: selectedType } : {};
+        }
+      },
+      eventTimeFormat: { hour: '2-digit', minute: '2-digit', meridiem: false },
+      eventClick: async function(info) {
+        try {
+          const res = await fetch('/api/documents/' + info.event.id);
+          if (!res.ok) throw new Error('Failed to load document');
+          const doc = await res.json();
+          const isRemote = doc.image_path && /^https?:\/\//.test(doc.image_path);
+          const src = isRemote ? doc.image_path : ('/' + doc.image_path);
+
+          document.getElementById('docDetailsLabel').textContent = `${doc.document_number} - ${doc.document_type}`;
+          document.getElementById('docDetailsImage').src = src;
+          document.getElementById('docDetailsNumber').textContent = doc.document_number || '';
+          document.getElementById('docDetailsType').textContent = doc.document_type || '';
+          document.getElementById('docDetailsCustomer').textContent = doc.customer_name || '';
+          document.getElementById('docDetailsStatus').textContent = doc.shipment_status || '';
+          document.getElementById('docDetailsUploaded').textContent = doc.upload_date ? new Date(doc.upload_date).toLocaleString() : 'N/A';
+          document.getElementById('docDetailsEstimated').textContent = doc.estimated_delivery_date ? new Date(doc.estimated_delivery_date).toLocaleDateString() : 'N/A';
+          document.getElementById('docDetailsSummary').textContent = doc.document_summary || 'No summary provided.';
+
+          const modal = new bootstrap.Modal(document.getElementById('docDetailsModal'));
+          modal.show();
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    });
+
+    calendar.render();
+
+    // Refetch events when filter changes
+    filterEl.addEventListener('change', function() {
+      selectedType = this.value;
+      calendar.refetchEvents();
+    });
+  });
+</script>
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>

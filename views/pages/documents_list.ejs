@@ -1,0 +1,89 @@
+<div class="container-fluid my-3">
+  <% var _allowedTypes = (typeof allowedTypes !== 'undefined') ? allowedTypes : []; %>
+  <% var selType = (typeof selectedType !== 'undefined') ? selectedType : ''; %>
+  <form method="get" action="/documents/list" class="row g-3 align-items-end">
+    <div class="col-sm-4 col-md-3">
+      <label class="form-label">Filter by Type</label>
+      <select name="type" class="form-select">
+        <option value="">All</option>
+        <% _allowedTypes.forEach(function(t) { %>
+          <option value="<%= t %>" <%= selType === t ? 'selected' : '' %>><%= t %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="col-sm-4 col-md-3">
+      <div class="form-check mt-4">
+        <input class="form-check-input" type="checkbox" id="groupByType" />
+        <label class="form-check-label" for="groupByType">
+          Group by Document Type
+        </label>
+      </div>
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-outline-primary">
+        <i class="bi bi-funnel"></i> Apply
+      </button>
+    </div>
+  </form>
+</div>
+
+<div class="container-fluid">
+  <div class="card">
+    <div class="card-body">
+      <table id="documentsTable" class="table table-striped table-bordered" style="width:100%">
+        <thead>
+          <tr>
+            <th>Document Number</th>
+            <th>Type</th>
+            <th>Customer</th>
+            <th>Status</th>
+            <th>Upload Date</th>
+            <th>Document Age (days)</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% (docs || []).forEach(function(doc) { 
+               const uploaded = new Date(doc.upload_date);
+               const ageDays = Math.floor((Date.now() - uploaded.getTime()) / (1000 * 60 * 60 * 24));
+          %>
+            <tr>
+              <td><%= doc.document_number %></td>
+              <td><%= doc.document_type %></td>
+              <td><%= doc.customer_name %></td>
+              <td><%= doc.shipment_status %></td>
+              <td><%= uploaded.toLocaleString() %></td>
+              <td><%= ageDays %></td>
+              <td><%= doc.description || '' %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Initialize DataTable with sorting, optional row grouping
+  $(function() {
+    const table = $('#documentsTable').DataTable({
+      order: [[4, 'desc']], // default sort by upload date
+      pageLength: 10,
+      rowGroup: false, // we toggle via checkbox
+      columnDefs: [
+        { targets: [5], type: 'num' } // age days numeric
+      ]
+    });
+
+    const groupCheckbox = document.getElementById('groupByType');
+    if (groupCheckbox) {
+      groupCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+          table.rowGroup().enable().dataSrc(1); // group by Type (column index 1)
+        } else {
+          table.rowGroup().disable();
+        }
+      });
+    }
+  });
+</script>
