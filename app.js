@@ -213,7 +213,7 @@ const prefixMap = {
   'Other': 'OTH'
 };
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 2832;
 
 async function ensureSchema() {
   // Create table if not exists
